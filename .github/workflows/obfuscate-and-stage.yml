@@ -42,9 +42,20 @@ jobs:
         run: node --input-type=module --check < _worker_obfus.js
 
       - name: Commit and push to generate_obfus
+        env:
+          # 仓库级 secret：PAT（经典 token 需 repo 权限，或 fine-grained token 授予本仓库
+          # Contents 读写）。必须用 PAT 推送，GITHUB_TOKEN 推送不会触发工作流 B 的
+          # push 事件（B 不在默认分支上，workflow_run 联动不可用）。
+          # 未配置时回退 GITHUB_TOKEN：generate_obfus 仍会更新，但不会自动触发部署。
+          PUSH_TOKEN: ${{ secrets.OBFUS_PUSH_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --force _worker_obfus.js
           git commit -m "chore: regenerate obfuscated worker from alpha @ ${{ github.sha }}"
+          if [ -n "$PUSH_TOKEN" ]; then
+            git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git"
+          else
+            echo "::warning::未配置 OBFUS_PUSH_TOKEN，使用 GITHUB_TOKEN 推送；generate_obfus 已更新，但部署工作流不会自动触发"
+          fi
           git push --force origin HEAD:generate_obfus

@@ -1,9 +1,9 @@
 # 工作流 B：部署 worker 到 Cloudflare
-# 触发条件（任一）：
-#   - generate_obfus 远程分支有新的提交（人工或其他来源推送）
-#   - 工作流 A（Obfuscate and Stage Worker）成功执行完毕
-#     （工作流 A 使用 GITHUB_TOKEN 推送 generate_obfus 不会触发 push 事件，
-#       因此必须通过 workflow_run 联动）
+# 触发条件：
+#   - generate_obfus 远程分支有新的提交（主触发：工作流 A 使用 PAT 推送 generate_obfus
+#     时会触发 push 事件；人工推送该分支同样触发）
+#   - workflow_run：仅当本工作流文件存在于默认分支(main)时生效。当前流水线文件只放在
+#     alpha/generate_obfus 分支，此触发暂不生效，保留以便将来通过 PR 合并到 main 后启用
 # 流程：
 #   1. 读取 cloudflare_accounts.json 明文配置，得到每个 cloudflare 账户对应的
 #      GitHub environment 名称（即 secrets 索引）
