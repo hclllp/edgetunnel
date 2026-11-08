@@ -1,0 +1,50 @@
+# 工作流 A：混淆并暂存 worker
+# 触发条件：向 alpha 分支推送（git push origin alpha）
+# 1. 按 obfuscation_rules.json 规则混淆 _worker.js
+# 2. 将 Genesis.txt（在前）与混淆后的代码（在后）合并为 _worker_obfus.js
+# 3. 提交到 generate_obfus 远程分支（force push，保持单提交）
+name: Obfuscate and Stage Worker
+
+on:
+  push:
+    branches: [alpha]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: obfuscate-alpha
+  cancel-in-progress: false
+
+jobs:
+  obfuscate-and-stage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout alpha
+        uses: actions/checkout@v4
+        with:
+          ref: alpha
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Obfuscate _worker.js and merge Genesis
+        run: |
+          python3 obfuscate.py \
+            --config obfuscation_rules.json \
+            --input _worker.js \
+            --genesis Genesis.txt \
+            --output _worker_obfus.js
+
+      - name: Syntax check (ESM)
+        run: node --input-type=module --check < _worker_obfus.js
+
+      - name: Commit and push to generate_obfus
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --force _worker_obfus.js
+          git commit -m "chore: regenerate obfuscated worker from alpha @ ${{ github.sha }}"
+          git push --force origin HEAD:generate_obfus

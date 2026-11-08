@@ -1,0 +1,65 @@
+{
+  "_comment": [
+    "JS 混淆规则配置文件（由 obfuscate.py 读取）。包含两大核心混淆手段：",
+    "  1. string_splitting      —— 字符串切割：把长度达标的字符串字面量随机切成多段，用 + 连接。",
+    "                             仅改变源码形态，运行值完全不变。",
+    "  2. dictionary_replacement —— 字典替换：",
+    "       a) 字符串字面量：命中字典（整值或子串）的字面量按 escape_mode 重编码（如",
+    "          'password' -> '\\x70\\x61\\x73...'），运行值不变，但源码中不再出现明文。",
+    "       b) 标识符重命名（apply_to_identifiers，默认关闭，风险高）：把命中字典的标识符",
+    "          替换为字典值。注意：凡可能被动态访问（obj[name]）、或与 Cloudflare 运行时",
+    "          变量/绑定同名的名字必须列入 protected，否则会破坏运行逻辑。",
+    "  3. property_access       —— 属性访问改写：a.b -> a['b']（字典键或全部属性），",
+    "                             运行语义不变。",
+    "混淆器基于 seed 完全确定性：相同输入 + 相同配置 => 相同输出，便于 CI 复现。",
+    "修改 seed 或字典即可得到不同的混淆产物。",
+    "安全说明：字符串切割/字典转义均为值保持（value-preserving）变换，不会改变运行逻辑；",
+    "指令序言（如 'use strict'）、对象键、import/export 模块说明符、类字段等结构位置会自动跳过。"
+  ],
+  "version": 1,
+  "seed": 20261108,
+
+  "string_splitting": {
+    "_comment": "字符串切割：长度 >= min_length 的字面量被切成 min_chunks~max_chunks 段（每段 >= min_chunk_length）。exclude_literals 中的值绝不切割（值保持变换，一般无需排除）。",
+    "enabled": true,
+    "min_length": 12,
+    "min_chunks": 2,
+    "max_chunks": 5,
+    "min_chunk_length": 4,
+    "exclude_literals": []
+  },
+
+  "dictionary_replacement": {
+    "_comment": "字典替换。dictionary 的键为源码中的敏感词，值用于标识符重命名（apply_to_identifiers 开启时）。match_substrings=true 时子串命中也生效（不区分大小写）。escape_mode: keyword=仅转义命中片段；all=整个字面量全转义；none=不转义。",
+    "enabled": true,
+    "dictionary": {
+      "password": "_p9k2",
+      "admin": "_a4m7",
+      "uuid": "_u1x6",
+      "cloudflare": "_c8f3",
+      "workers.dev": "_w2d5",
+      "github.com": "_g5h6",
+      "vless": "_v3s7",
+      "trojan": "_t6j2",
+      "vmess": "_m5s4",
+      "shadowsocks": "_s8k1",
+      "edgetunnel": "_e7n4"
+    },
+    "apply_to_string_literals": true,
+    "match_substrings": true,
+    "escape_mode": "keyword",
+    "apply_to_identifiers": false,
+    "rename_properties": false,
+    "protected": [
+      "uuid", "UUID", "admin", "ADMIN", "password", "PASSWORD", "pswd",
+      "TOKEN", "KEY", "HOST", "DEBUG", "PRELOAD_RACE_DIAL", "KV", "env"
+    ]
+  },
+
+  "property_access": {
+    "_comment": "属性访问改写。bracket_all=true 时全部 a.b 改写为 a['b']；bracket_dictionary_keys=true 时仅改写字典键对应的属性。new.target / import.meta 等元属性与私有字段 #x 自动跳过。",
+    "enabled": true,
+    "bracket_all": false,
+    "bracket_dictionary_keys": true
+  }
+}

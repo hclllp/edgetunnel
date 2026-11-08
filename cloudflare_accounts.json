@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "明文配置文件：cloudflare 账户名 -> GitHub Environment 名称的映射。",
+    "工作流 B（部署）依据此文件逐一处理每个账户：",
+    "  1. 使用 environment 字段定位 GitHub 中存放该账户私密环境变量的 environment；",
+    "  2. 从该 environment 的 secrets 中读取 Cloudflare 访问私钥、实例名、UUID、密码、域名；",
+    "  3. 创建/更新对应 Cloudflare 实例并部署混淆后的 worker。",
+    "environment 必须是 GitHub 仓库中真实存在的 environment 名称；",
+    "新增账户时在此追加一条记录，并在 GitHub 中创建同名 environment 及对应 secrets：",
+    "  CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN / CLOUDFLARE_INSTANCE_NAME /",
+    "  UUID / PASSWORD / CLOUDFLARE_DOMAIN",
+    "本文件不含任何私密信息，可安全提交。"
+  ],
+  "accounts": [
+    {
+      "account_name": "hclllp",
+      "environment": "hclllp_github_account"
+    },
+    {
+      "account_name": "apple",
+      "environment": "apple_account"
+    }
+  ]
+}

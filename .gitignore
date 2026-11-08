@@ -38,3 +38,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 log/
+comment_for_ai.txt
+edgetunnel.js
+proxy_cloudflare_orgin_obfuscate.js
+proxy_cloudflare_orgin.js
+
+# 混淆/CI 产物（工作流 A 生成 _worker_obfus.js 并 force-add 到 generate_obfus）
+_worker_obfus.js
+wrangler.ci.toml
