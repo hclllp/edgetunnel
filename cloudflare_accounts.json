@@ -9,7 +9,8 @@
     "新增账户时在此追加一条记录，并在 GitHub 中创建同名 environment 及对应 secrets：",
     "  CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN / CLOUDFLARE_INSTANCE_NAME /",
     "  UUID / PASSWORD / CLOUDFLARE_DOMAIN",
-    "本文件不含任何私密信息，可安全提交。"
+    "本文件不含任何私密信息，可安全提交。",
+    "test"
   ],
   "accounts": [
 
