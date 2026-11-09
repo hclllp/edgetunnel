@@ -9,12 +9,10 @@
     "新增账户时在此追加一条记录，并在 GitHub 中创建同名 environment 及对应 secrets：",
     "  CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN / CLOUDFLARE_INSTANCE_NAME /",
     "  UUID / PASSWORD / CLOUDFLARE_DOMAIN",
-    "本文件不含任何私密信息，可安全提交。",
-    "注意：JSON 不支持 // 注释，停用账户请直接删除对应记录。",
-    "已停用示例：{\"account_name\": \"hclllp\", \"environment\": \"hclllp_github_account\"} ——",
-    "如需恢复，重新加入 accounts 并在 GitHub 填写该 environment 的 secrets 即可。"
+    "本文件不含任何私密信息，可安全提交。"
   ],
   "accounts": [
+
     {
       "account_name": "apple",
       "environment": "apple_account"
