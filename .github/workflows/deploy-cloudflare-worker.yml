@@ -76,4 +76,5 @@ jobs:
           UUID: ${{ secrets.UUID }}
           PASSWORD: ${{ secrets.PASSWORD }}
           CLOUDFLARE_DOMAIN: ${{ secrets.CLOUDFLARE_DOMAIN }}
+          CLOUDFLARE_ROOT_DOMAIN: ${{ matrix.account.root_domain }}
         run: bash scripts/deploy_cloudflare.sh

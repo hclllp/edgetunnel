@@ -101,26 +101,61 @@ printf '%s' "$PASSWORD" | wrangler secret put admin --config "$CFG" >/dev/null
 echo "==> 已设置运行密钥 uuid / admin"
 
 # 6) 绑定自定义域名（幂等；失败仅告警不阻断）
-ROOT_DOMAIN=$(python3 -c "
+#    CLOUDFLARE_DOMAIN 为裸标签（不含点）时，拼接根域名构造访问域名：
+#    例如 CLOUDFLARE_DOMAIN=abc + 根域名 cooolin.cc.cd => abc.cooolin.cc.cd
+HOSTNAME="$DOMAIN"
+case "$DOMAIN" in
+  *.*) ;;
+  *)
+    if [ -n "${CLOUDFLARE_ROOT_DOMAIN:-}" ]; then
+      HOSTNAME="$DOMAIN.$CLOUDFLARE_ROOT_DOMAIN"
+    else
+      echo "::warning::CLOUDFLARE_DOMAIN 是裸标签但未配置 CLOUDFLARE_ROOT_DOMAIN，无法构造完整域名"
+      HOSTNAME=""
+    fi
+    ;;
+esac
+
+if [ -n "$HOSTNAME" ]; then
+  # 逐级向上查找真实 Zone（如 xxx.cooolin.cc.cd -> cooolin.cc.cd），避免固定取后两级标签
+  ZONE_ID=""
+  ZONE_NAME=""
+  ZONE_CANDIDATES=$(python3 -c "
 import sys
 parts = sys.argv[1].rstrip('.').split('.')
-print('.'.join(parts[-2:]) if len(parts) >= 2 else parts[0])
-" "$DOMAIN")
-ZONE_ID=$(curl -fsS "$API/zones?name=$ROOT_DOMAIN" \
-  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-  | python3 -c "import json,sys;z=json.load(sys.stdin).get('result') or [];print(z[0]['id'] if z else '')" 2>/dev/null || true)
-if [ -n "$ZONE_ID" ]; then
-  if curl -fsS -X PUT "$API/accounts/$ACCOUNT_ID/workers/domains" \
+for i in range(len(parts) - 1):
+    print('.'.join(parts[i:]))
+" "$HOSTNAME")
+  for CAND in $ZONE_CANDIDATES; do
+    ZONE_ID=$(curl -sS "$API/zones?name=$CAND" \
+      -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+      | python3 -c "import json,sys;z=json.load(sys.stdin).get('result') or [];print(z[0]['id'] if z else '')" 2>/dev/null || true)
+    if [ -n "$ZONE_ID" ]; then
+      ZONE_NAME="$CAND"
+      break
+    fi
+  done
+
+  if [ -n "$ZONE_ID" ]; then
+    echo "==> 绑定自定义域名 $HOSTNAME（Zone: $ZONE_NAME）"
+    RESP=$(curl -sS -X PUT "$API/accounts/$ACCOUNT_ID/workers/domains" \
       -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
       -H "Content-Type: application/json" \
-      -d "{\"zone_id\":\"$ZONE_ID\",\"hostname\":\"$DOMAIN\",\"service\":\"$INSTANCE\",\"environment\":\"production\"}" \
-      >/dev/null 2>&1; then
-    echo "==> 已绑定自定义域名: $DOMAIN"
+      -d "{\"zone_id\":\"$ZONE_ID\",\"hostname\":\"$HOSTNAME\",\"service\":\"$INSTANCE\",\"environment\":\"production\"}")
+    if printf '%s' "$RESP" | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+sys.exit(0 if r.get('success') else 1)
+"; then
+      echo "==> 已绑定自定义域名: $HOSTNAME"
+    else
+      echo "::warning::自定义域名 $HOSTNAME 绑定失败，API 返回："
+      printf '%s\n' "$RESP" | head -10
+    fi
   else
-    echo "::warning::自定义域名 $DOMAIN 绑定失败（检查账户计划与 Token 权限），已跳过"
+    echo "::warning::未找到 $HOSTNAME 对应的 Zone（Token 需 Zone Read 权限，或域名未接入该账户），已跳过域名绑定"
   fi
-else
-  echo "::warning::未找到域名 $ROOT_DOMAIN 对应的 Zone（Token 需 Zone Read 权限），已跳过域名绑定"
+  DOMAIN="$HOSTNAME"
 fi
 
 # 7) 打印访问链接

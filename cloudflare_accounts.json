@@ -10,13 +10,15 @@
     "  CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN / CLOUDFLARE_INSTANCE_NAME /",
     "  UUID / PASSWORD / CLOUDFLARE_DOMAIN",
     "本文件不含任何私密信息，可安全提交。",
-    "test"
+    "root_domain：该账户已接入 Cloudflare 的根域名。CLOUDFLARE_DOMAIN 为裸标签时",
+    "自动拼接为 <CLOUDFLARE_DOMAIN>.<root_domain>（如 abc.cooolin.cc.cd）。"
   ],
   "accounts": [
 
     {
       "account_name": "apple",
-      "environment": "apple_account"
+      "environment": "apple_account",
+      "root_domain": "cooolin.cc.cd"
     }
   ]
 }

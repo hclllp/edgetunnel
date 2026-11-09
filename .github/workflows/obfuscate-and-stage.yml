@@ -1,6 +1,7 @@
 # 工作流 A：混淆并暂存 worker
 # 触发条件：向 alpha 分支推送（git push origin alpha）
-# 1. 按 obfuscation_rules.json 规则混淆 _worker.js
+# 1. 使用开源混淆器 javascript-obfuscator，按 obfuscation_rules.json 规则混淆 _worker.js
+#    （规则含字典替换 identifierNamesGenerator=dictionary 与字符串切割 splitStrings）
 # 2. 将 Genesis.txt（在前）与混淆后的代码（在后）合并为 _worker_obfus.js
 # 3. 提交到 generate_obfus 远程分支（force push，保持单提交）
 name: Obfuscate and Stage Worker
@@ -29,18 +30,22 @@ jobs:
           # 未配置 OBFUS_PUSH_TOKEN 时回退 GITHUB_TOKEN（generate_obfus 仍更新，但不触发部署）。
           token: ${{ secrets.OBFUS_PUSH_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
+          node-version: '20'
 
-      - name: Obfuscate _worker.js and merge Genesis
+      - name: Obfuscate with javascript-obfuscator
         run: |
-          python3 obfuscate.py \
-            --config obfuscation_rules.json \
-            --input _worker.js \
-            --genesis Genesis.txt \
-            --output _worker_obfus.js
+          npx --yes javascript-obfuscator _worker.js \
+            --output obfuscated.js \
+            --config obfuscation_rules.json
+
+      - name: Merge Genesis + obfuscated code
+        run: |
+          cp Genesis.txt _worker_obfus.js
+          printf '\n' >> _worker_obfus.js
+          cat obfuscated.js >> _worker_obfus.js
 
       - name: Syntax check (ESM)
         run: node --input-type=module --check < _worker_obfus.js

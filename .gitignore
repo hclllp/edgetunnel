@@ -45,4 +45,5 @@ proxy_cloudflare_orgin.js
 
 # 混淆/CI 产物（工作流 A 生成 _worker_obfus.js 并 force-add 到 generate_obfus）
 _worker_obfus.js
+obfuscated.js
 wrangler.ci.toml
