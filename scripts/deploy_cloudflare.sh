@@ -31,16 +31,38 @@ CFG="wrangler.ci.toml"
 
 echo "==> 部署账户 $ACCOUNT_ID / 实例 $INSTANCE"
 
-# 1) KV 命名空间：按标题复用已存在的，否则新建
-KV_ID=$(wrangler kv namespace list --json 2>/dev/null | python3 -c "
+# 1) KV 命名空间：按标题复用已存在的，否则新建（直接用 REST API，
+#   避免 wrangler v4 已移除 kv namespace list/create 的 --json 参数的问题）
+KV_LIST=$(curl -sS "$API/accounts/$ACCOUNT_ID/storage/kv/namespaces?per_page=100" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" || true)
+KV_ID=$(printf '%s' "$KV_LIST" | python3 -c "
 import json, sys
-ns = json.load(sys.stdin)
-m = next((x for x in ns if x.get('title') == 'KV'), None)
-print(m['id'] if m else '')
+try:
+    r = json.load(sys.stdin).get('result') or []
+    m = next((x for x in r if x.get('title') == 'KV'), None)
+    print(m['id'] if m else '')
+except Exception:
+    print('')
 ")
 if [ -z "$KV_ID" ]; then
   echo "==> 新建 KV 命名空间 KV"
-  KV_ID=$(wrangler kv namespace create KV --json | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
+  KV_RESP=$(curl -sS -X POST "$API/accounts/$ACCOUNT_ID/storage/kv/namespaces" \
+    -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"title":"KV"}')
+  KV_ID=$(printf '%s' "$KV_RESP" | python3 -c "
+import json, sys
+try:
+    r = json.load(sys.stdin)
+    print(r.get('result', {}).get('id', '') or '')
+except Exception:
+    print('')
+" 2>/dev/null || true)
+  if [ -z "$KV_ID" ]; then
+    echo "::error::KV 命名空间创建失败，API 返回："
+    printf '%s\n' "$KV_RESP" | head -20
+    exit 1
+  fi
 fi
 echo "==> KV 命名空间 ID: $KV_ID"
 
